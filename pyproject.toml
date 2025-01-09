@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "speedx"
+version = "1.0"
+description = "SpeedX is a python script for bypassing blocked hosts using HTTP headers and IP lists"
+authors = [
+    { name = "brunomcuesta", email = "anon@mail.com" }
+]
+license = { text = "MIT" }
+dependencies = [
+    "requests",
+    "tqdm"
+]
+
+[project.scripts]
+speedx = "speedx:main"
