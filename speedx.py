@@ -55,7 +55,7 @@ def test_bypass(header, ip, domain, pbar):
         http_code_403 = response_403.status_code
         if http_code_403 == 403:
             response = requests.head(domain, headers={header: ip}, timeout=10)
-            http_code = response_403.status_code
+            http_code = response.status_code
             # If the status is 200 or 302, print the result
             if http_code == 200:
                 print(f"[STATUS 200] Bypass for IP: {ip} and Header: {header} at Domain: {domain}")
@@ -73,7 +73,7 @@ def start_threads():
     threads = []
     total_tests = len(header_list) * len(ips_list) * len(domains_list)
     # Progress bar
-    with tqdm(total=total_tests, desc="Trying to bypass with headers, IPs") as pbar:
+    with tqdm(total=total_tests, desc="Running") as pbar:
         # Loop through all IPs and headers first
         for ip in ips_list:
             for header in header_list:
