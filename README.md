@@ -20,7 +20,7 @@ $ pipx install .
 
 ```
 $ speedx -h                                                                           
-usage: speedx.py [-h] -i IPS -d DOMAINS
+usage: speedx [-h] -i IPS -d DOMAINS
 
 403 bypass test using HTTP headers and IPs
 
