@@ -1,4 +1,4 @@
-# speedx
+# SpeedX
 
 ![speedx](https://i.imgur.com/SU29WSn.png)
 
@@ -20,7 +20,7 @@ $ pipx install .
 
 ```
 $ speedx -h                                                                           
-usage: speedx [-h] -i IPS -d DOMAINS
+usage: speedx [-h] -i IPS -d DOMAINS [-o OUTPUT]
 
 403 bypass test using HTTP headers and IPs
 
@@ -29,11 +29,15 @@ options:
   -i IPS, --ips IPS     File containing list of IPs
   -d DOMAINS, --domains DOMAINS
                         File containing list of domains
+  -o OUTPUT, --output OUTPUT
+                        File to save the bypass results (optional)
 ```
 
 ### With venv
 
 ```
+$ git clone https://github.com/brunomcuesta/speedx.git
+$ cd speedx
 $ python3 -m venv .env
 $ source .env/bin/activate
 $ pip install -r requirements.txt
@@ -43,7 +47,7 @@ $ pip install -r requirements.txt
 
 ```
 $ python3 speedx.py -h                                                                           
-usage: speedx.py [-h] -i IPS -d DOMAINS
+usage: speedx.py [-h] -i IPS -d DOMAINS [-o OUTPUT]
 
 403 bypass test using HTTP headers and IPs
 
@@ -52,4 +56,6 @@ options:
   -i IPS, --ips IPS     File containing list of IPs
   -d DOMAINS, --domains DOMAINS
                         File containing list of domains
+  -o OUTPUT, --output OUTPUT
+                        File to save the bypass results (optional)
 ```
