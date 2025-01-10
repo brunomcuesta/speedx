@@ -25,8 +25,8 @@ domains_list = read_file(args.domains)
 header_list = [
     "Access-Control-Allow-Origin", "Base-Url", "CF-Connecting-IP",
     "CF-Connecting_IP", "Client-IP", "Cluster-Client-IP",
-    "Content-Length", "Destination", "From", "Http-Url",
-    "Origin", "Profile", "Proxy", "Proxy-Authenticate",
+    "Destination", "From", "Http-Url", "Origin",
+    "Profile", "Proxy", "Proxy-Authenticate",
     "Proxy-Authorization", "Proxy-Client-IP", "Proxy-Host",
     "Proxy-Http", "Proxy-Url", "Real-Ip", "Redirect", "Referer",
     "Referrer", "Request-Uri", "Server", "True-Client-IP", "Uri",
@@ -48,8 +48,6 @@ header_list = [
 # Function that performs the test for each header and IP
 def test_bypass(header, ip, domain, pbar):
     try:
-        # Displays the IP and Header being tested
-        #print(f"Testing Header: {header} for IP: {ip} and Domain: {domain}")
         # Carrying out the request
         response_403 = requests.head(domain, timeout=10)
         http_code_403 = response_403.status_code
@@ -57,10 +55,9 @@ def test_bypass(header, ip, domain, pbar):
             response = requests.head(domain, headers={header: ip}, timeout=10)
             http_code = response.status_code
             # If the status is 200 or 302, print the result
-            if http_code == 200:
-                print(f"[STATUS 200] Bypass for IP: {ip} and Header: {header} at Domain: {domain}")
-            elif http_code == 302:
-                print(f"[STATUS 302] Redirect for IP: {ip} and Header: {header} at Domain: {domain}")  
+            if http_code in [200, 302, 404]:
+                tqdm.write(f"[STATUS {http_code}] Bypass for Domain: {domain}\t Header: {header}\t IP: {ip}")
+  
     except requests.RequestException as e:
         # If there is an error in the request, ignore it
         pass
