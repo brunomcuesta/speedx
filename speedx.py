@@ -9,6 +9,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="403 bypass test using HTTP headers and IPs")
     parser.add_argument('-i', '--ips', type=str, required=True, help="File containing list of IPs")
     parser.add_argument('-d', '--domains', type=str, required=True, help="File containing list of domains")
+    parser.add_argument('-o', '--output', type=str, help="File to save the bypass results (optional)")
+
     return parser.parse_args()
 
 # Function to read file and return a list of lines
@@ -20,6 +22,10 @@ def read_file(file_path):
 args = parse_arguments()
 ips_list = read_file(args.ips)
 domains_list = read_file(args.domains)
+output_file = args.output
+
+# Shared list to accumulate results
+results = []
 
 # Defining header variables
 header_list = [
@@ -45,6 +51,13 @@ header_list = [
     "X-Rewrite-Url", "X-Rewrite-URL", "X-WAP-Profile"
 ]
 
+# Function to write results to an output file (only when the test is finished)
+def write_results_to_file(results):
+    if results:
+        with open(output_file, "w") as file:
+            for domain, status_code, header, ip in results:
+                file.write(f"[STATUS {status_code}] Bypass: {domain} Header: {header} IP: {ip}\n")
+
 # Function that performs the test for each header and IP
 def test_bypass(header, ip, domain, pbar):
     try:
@@ -54,9 +67,11 @@ def test_bypass(header, ip, domain, pbar):
         if http_code_403 == 403:
             response = requests.head(domain, headers={header: ip}, timeout=10)
             http_code = response.status_code
-            # If the status is 200 or 302, print the result
+            # If the status is 200, 302 or 404, print the result
             if http_code in [200, 302, 404]:
-                tqdm.write(f"[STATUS {http_code}] Bypass for Domain: {domain}\t Header: {header}\t IP: {ip}")
+                tqdm.write(f"[STATUS {http_code}] Bypass for Domain: {domain} Header: {header} IP: {ip}")
+                if output_file:
+                    results.append((domain, http_code, header, ip))
   
     except requests.RequestException as e:
         # If there is an error in the request, ignore it
@@ -83,6 +98,11 @@ def start_threads():
         # Wait for all threads to finish
         for thread in threads:
             thread.join()
+
+    # After all threads finish, write results to file
+    print(f"[!] Total bypass found: {len(results)}\n")
+    if output_file:
+        write_results_to_file(results)
 
 # Main function
 def main():
