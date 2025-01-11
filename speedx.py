@@ -3,6 +3,7 @@ import threading
 import requests
 import argparse
 from tqdm import tqdm
+requests.packages.urllib3.disable_warnings() 
 
 # Function to parse command line arguments
 def parse_arguments():
@@ -62,10 +63,10 @@ def write_results_to_file(results):
 def test_bypass(header, ip, domain, pbar):
     try:
         # Carrying out the request
-        response_403 = requests.head(domain, timeout=10)
+        response_403 = requests.head(domain, timeout=10, verify=False)
         http_code_403 = response_403.status_code
         if http_code_403 == 403:
-            response = requests.head(domain, headers={header: ip}, timeout=10)
+            response = requests.head(domain, headers={header: ip}, timeout=10, verify=False)
             http_code = response.status_code
             # If the status is 200, 302 or 404, print the result
             if http_code in [200, 302, 404]:
