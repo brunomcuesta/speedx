@@ -17,6 +17,3 @@ dependencies = [
 
 [project.scripts]
 speedx = "speedx:main"
-
-[tool.setuptools.packages.find]
-where = ["src"]
