@@ -1,32 +1,9 @@
-# -*- coding: utf-8 -*-
 import threading
 import requests
 import argparse
 from tqdm import tqdm
-requests.packages.urllib3.disable_warnings() 
-
-# Function to parse command line arguments
-def parse_arguments():
-    parser = argparse.ArgumentParser(description="403 bypass test using HTTP headers and IPs")
-    parser.add_argument('-i', '--ips', type=str, required=True, help="File containing list of IPs")
-    parser.add_argument('-d', '--domains', type=str, required=True, help="File containing list of domains")
-    parser.add_argument('-o', '--output', type=str, help="File to save the bypass results (optional)")
-
-    return parser.parse_args()
-
-# Function to read file and return a list of lines
-def read_file(file_path):
-    with open(file_path, "r") as file:
-        return [line.rstrip('\n') for line in file]
-
-# Reading the files passed as arguments
-args = parse_arguments()
-ips_list = read_file(args.ips)
-domains_list = read_file(args.domains)
-output_file = args.output
-
-# Shared list to accumulate results
-results = []
+from time import sleep
+requests.packages.urllib3.disable_warnings()
 
 # Defining header variables
 header_list = [
@@ -52,64 +29,82 @@ header_list = [
     "X-Rewrite-Url", "X-Rewrite-URL", "X-WAP-Profile"
 ]
 
+# Function to parse command line arguments
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="403 bypass test using HTTP headers and IPs")
+    parser.add_argument('-i', '--ips', type=str, required=True, help="File containing list of IPs")
+    parser.add_argument('-d', '--domains', type=str, required=True, help="File containing list of domains")
+    parser.add_argument('-o', '--output', type=str, help="File to save the bypass results (optional)")
+    return parser.parse_args()
+
+# Function to read file and return a list of lines
+def read_file(file_path):
+    with open(file_path, "r") as file:
+        return [line.rstrip('\n') for line in file]
+
 # Function to write results to an output file (only when the test is finished)
-def write_results_to_file(results):
-    if results:
+def write_results_to_file(results, output_file):
+    if results and output_file:
         with open(output_file, "w") as file:
             for domain, status_code, header, ip in results:
                 file.write(f"[STATUS {status_code}] Bypass: {domain} Header: {header} IP: {ip}\n")
 
 # Function that performs the test for each header and IP
-def test_bypass(header, ip, domain, pbar):
+def test_bypass(header, ip, domain, results, pbar, output_file):
+    session = requests.Session()
     try:
-        # Carrying out the request
-        response_403 = requests.head(domain, timeout=10, verify=False)
-        http_code_403 = response_403.status_code
-        if http_code_403 == 403:
-            response = requests.head(domain, headers={header: ip}, timeout=10, verify=False)
+        response_403 = session.head(domain, timeout=10, verify=False, allow_redirects=False)
+        if response_403.status_code == 403:
+            response = session.head(domain, headers={header: ip}, timeout=10, verify=False)
             http_code = response.status_code
-            # If the status is 200, 302 or 404, print the result
-            if http_code in [200, 302, 404]:
+            if http_code in [200, 301, 302, 401, 404]:
                 tqdm.write(f"[STATUS {http_code}] Bypass for Domain: {domain} Header: {header} IP: {ip}")
+                results.append((domain, http_code, header, ip))
                 if output_file:
-                    results.append((domain, http_code, header, ip))
-  
-    except requests.RequestException as e:
-        # If there is an error in the request, ignore it
-        pass
+                    write_results_to_file(results, output_file)
+        pbar.update(1)
 
-    # Updates the progress bar after each test
-    pbar.update(1)
+    except requests.exceptions.ConnectionError:
+        #tqdm.write(f"[!] Connection Error for {domain} with Header: {header} and IP: {ip}")
+        pass
+    except requests.exceptions.Timeout:
+        #tqdm.write(f"[!] Timeout for {domain} with Header: {header} and IP: {ip}")
+        pass
+    except requests.exceptions.RequestException as e:
+        #tqdm.write(f"[!] Request Exception for {domain} with Header: {header} and IP: {ip}: {e}")
+        pass
+    finally:
+        session.close()
 
 # Function that creates threads to test in parallel
-def start_threads():
+def start_threads(ips_list, domains_list, header_list, results, output_file):
     threads = []
     total_tests = len(header_list) * len(ips_list) * len(domains_list)
-    # Progress bar
+    print(f"[!] Total tests: {total_tests}")
     with tqdm(total=total_tests, desc="Running") as pbar:
-        # Loop through all IPs and headers first
         for ip in ips_list:
             for header in header_list:
-                # For each combination of IP and Header, test with all domains
                 for domain in domains_list:
-                    # Create a new thread for each test (IP, header) on the current domain
-                    thread = threading.Thread(target=test_bypass, args=(header, ip, domain, pbar))
-                    threads.append(thread)
+                    thread = threading.Thread(target=test_bypass, args=(header, ip, domain, results, pbar, output_file))
                     thread.start()
-        # Wait for all threads to finish
+                    threads.append(thread)
+                    sleep(0.05)
         for thread in threads:
             thread.join()
-
-    # After all threads finish, write results to file
-    print(f"[!] Total bypass found: {len(results)}\n")
-    if output_file:
-        write_results_to_file(results)
 
 # Main function
 def main():
     try:
         print("[+] Testing 403 bypass for multiple domains with different headers and IPs")
-        start_threads()
+        args = parse_arguments()
+        ips_list = read_file(args.ips)
+        domains_list = read_file(args.domains)
+        output_file = args.output
+        results = []
+        start_threads(ips_list, domains_list, header_list, results, output_file)
+        print(f"[!] Total bypass found: {len(results)}\n")
+        if output_file:
+            write_results_to_file(results, output_file)
     except KeyboardInterrupt:
         print("\n[!] Execution interrupted by user. Exiting...")
 
