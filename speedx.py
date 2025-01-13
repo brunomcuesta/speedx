@@ -50,7 +50,7 @@ def write_results_to_file(results, output_file):
                 file.write(f"[STATUS {status_code}] Bypass: {domain} Header: {header} IP: {ip}\n")
 
 # Function that performs the test for each header and IP
-def test_bypass(header, ip, domain, results, pbar, output_file):
+def test_bypass(header, ip, domain, results, pbar):
     session = requests.Session()
     try:
         response_403 = session.head(domain, timeout=10, verify=False, allow_redirects=False)
@@ -82,7 +82,7 @@ def start_threads(ips_list, domains_list, header_list, results, output_file):
         for ip in ips_list:
             for header in header_list:
                 for domain in domains_list:
-                    thread = threading.Thread(target=test_bypass, args=(header, ip, domain, results, pbar, output_file))
+                    thread = threading.Thread(target=test_bypass, args=(header, ip, domain, results, pbar))
                     thread.start()
                     threads.append(thread)
                     sleep(0.05)
