@@ -75,7 +75,7 @@ def test_bypass(header, ip, domain, results, pbar):
         session.close()
 
 # Function that creates threads to test in parallel
-def start_threads(ips_list, domains_list, header_list, results, output_file):
+def start_threads(ips_list, domains_list, header_list, results):
     threads = []
     total_tests = len(header_list) * len(ips_list) * len(domains_list)
     with tqdm(total=total_tests, desc="Running") as pbar:
@@ -98,7 +98,7 @@ def main():
         domains_list = read_file(args.domains)
         output_file = args.output
         results = []
-        start_threads(ips_list, domains_list, header_list, results, output_file)
+        start_threads(ips_list, domains_list, header_list, results)
         print(f"[!] Total bypass found: {len(results)}\n")
         write_results_to_file(results, output_file)
     except KeyboardInterrupt:
