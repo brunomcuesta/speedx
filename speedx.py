@@ -100,8 +100,7 @@ def main():
         results = []
         start_threads(ips_list, domains_list, header_list, results, output_file)
         print(f"[!] Total bypass found: {len(results)}\n")
-        if output_file:
-            write_results_to_file(results, output_file)
+        write_results_to_file(results, output_file)
     except KeyboardInterrupt:
         print("\n[!] Execution interrupted by user. Exiting...")
 
