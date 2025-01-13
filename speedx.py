@@ -60,8 +60,6 @@ def test_bypass(header, ip, domain, results, pbar, output_file):
             if http_code in [200, 301, 302, 401, 404]:
                 tqdm.write(f"[STATUS {http_code}] Bypass for Domain: {domain} Header: {header} IP: {ip}")
                 results.append((domain, http_code, header, ip))
-                if output_file:
-                    write_results_to_file(results, output_file)
         pbar.update(1)
 
     except requests.exceptions.ConnectionError:
