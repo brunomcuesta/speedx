@@ -39,7 +39,7 @@ def parse_arguments():
 
 # Function to read file and return a list of lines
 def read_file(file_path):
-    with open(file_path, "r") as file:
+    with open(file_path, "r", encoding='utf-8') as file:
         return [line.rstrip('\n') for line in file]
 
 # Function to write results to an output file (only when the test is finished)
@@ -60,6 +60,8 @@ def test_bypass(header, ip, domain, results, pbar, output_file):
             if http_code in [200, 301, 302, 401, 404]:
                 tqdm.write(f"[STATUS {http_code}] Bypass for Domain: {domain} Header: {header} IP: {ip}")
                 results.append((domain, http_code, header, ip))
+                if output_file:
+                    write_results_to_file(results, output_file)
         pbar.update(1)
 
     except requests.exceptions.ConnectionError:
@@ -78,7 +80,6 @@ def test_bypass(header, ip, domain, results, pbar, output_file):
 def start_threads(ips_list, domains_list, header_list, results, output_file):
     threads = []
     total_tests = len(header_list) * len(ips_list) * len(domains_list)
-    print(f"[!] Total tests: {total_tests}")
     with tqdm(total=total_tests, desc="Running") as pbar:
         for ip in ips_list:
             for header in header_list:
