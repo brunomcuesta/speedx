@@ -85,7 +85,6 @@ def start_threads(ips_list, domains_list, header_list, results):
                     thread = threading.Thread(target=test_bypass, args=(header, ip, domain, results, pbar))
                     thread.start()
                     threads.append(thread)
-                    sleep(0.05)
         for thread in threads:
             thread.join()
 
