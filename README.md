@@ -31,6 +31,8 @@ options:
                         File containing list of domains
   -o OUTPUT, --output OUTPUT
                         File to save the bypass results (optional)
+  -t, --threads THREADS
+                        Number of threads to use (default is 5)
 ```
 
 ### With venv
@@ -58,4 +60,6 @@ options:
                         File containing list of domains
   -o OUTPUT, --output OUTPUT
                         File to save the bypass results (optional)
+  -t, --threads THREADS
+                        Number of threads to use (default is 5)
 ```
